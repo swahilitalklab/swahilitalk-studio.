@@ -602,32 +602,35 @@ async function generate() {
   hideAudioResult();
   audioBlob = null;
 
-  try {
+ try {
     const params  = VOICE_PARAMS[currentVoice];
     const payload = {
       inputs: text,
-      parameters: { seed: params.seed, pitch_offset: params.pitch_offset },
+      parameters: { 
+        seed: params.seed, 
+        pitch_offset: params.pitch_offset 
+      },
+      // THIS IS THE KEY: It forces the AI to wake up before sending an error
+      options: { wait_for_model: true } 
     };
 
     const res = await fetch(
       `https://api-inference.huggingface.co/models/${HF_MODEL}`,
       {
-        method:  'POST',
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type':  'application/json',
-          'Accept':        'audio/mpeg',
+          'Content-Type':  'application/json'
         },
         body: JSON.stringify(payload),
       }
     );
 
     if (!res.ok) {
-      const txt = await res.text().catch(() => '');
+      const errorData = await res.json().catch(() => ({ error: 'Unknown server error' }));
       if (res.status === 401) throw new Error('❌ Invalid token. Check your Hugging Face Access Token in ⚙️ Settings.');
-      if (res.status === 503) throw new Error('⏳ Model is cold-starting on Hugging Face. Wait ~30 seconds and try again.');
-      if (res.status === 429) throw new Error('⏱️ Rate limit reached. Please wait a moment then try again.');
-      throw new Error(`API error ${res.status}: ${txt.slice(0, 200)}`);
+      if (res.status === 503) throw new Error('⏳ AI is waking up. Wait 10 seconds and click Narrate again.');
+      throw new Error(errorData.error || `API error ${res.status}`);
     }
 
     audioBlob = await res.blob();
@@ -641,6 +644,7 @@ async function generate() {
     showError(err.message || 'Something went wrong. Please try again.');
   } finally {
     setLoading(false);
+  }
   }
 }
 
