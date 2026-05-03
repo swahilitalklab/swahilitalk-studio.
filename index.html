@@ -631,20 +631,15 @@ async function generate() {
       },
     };
 
-    const res = await fetch(
-      `fetch("/api/narrate", {
+const res = await fetch("/api/narrate", {
   method: "POST",
   headers: {
     "Content-Type": "application/json"
   },
   body: JSON.stringify({
-    text: userInput
+    text: text
   })
-})
-.then(res => res.json())
-.then(data => {
-  console.log(data);
-});`,
+});
       {
         method: 'POST',
         headers: {
