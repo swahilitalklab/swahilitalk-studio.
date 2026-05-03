@@ -13,7 +13,7 @@
       --green-lt:   #4CAF50;
       --green-glow: rgba(46,125,50,0.35);
       --green-dim:  rgba(46,125,50,0.12);
-      --bg:          #0D1117;
+      --bg:         #0D1117;
       --surface:    #161B22;
       --surface2:   #1F2937;
       --border:     rgba(46,125,50,0.25);
@@ -154,6 +154,17 @@
       box-shadow: 0 4px 20px var(--green-glow);
       display: flex; align-items: center; gap: .65rem;
     }
+    .btn-generate::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .btn-generate:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px var(--green-glow);
+    }
+    .btn-generate:active:not(:disabled) { transform: translateY(0); }
     .btn-generate:disabled { opacity: .5; cursor: not-allowed; }
 
     .btn-dl {
@@ -167,6 +178,11 @@
       cursor: pointer;
       transition: background .18s, box-shadow .18s, transform .15s;
       display: flex; align-items: center; gap: .5rem;
+    }
+    .btn-dl:hover {
+      background: var(--green-dim);
+      box-shadow: 0 0 12px var(--green-glow);
+      transform: translateY(-1px);
     }
 
     .modal-backdrop {
@@ -183,6 +199,12 @@
       border-radius: 14px;
       padding: 2rem;
       width: min(92vw, 460px);
+      box-shadow: 0 0 60px rgba(46,125,50,0.2), 0 20px 60px rgba(0,0,0,0.5);
+      animation: fadeUp .22s ease;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
     .token-input {
       width: 100%;
@@ -190,9 +212,16 @@
       border: 1px solid var(--border);
       border-radius: 8px;
       color: var(--text);
-      padding: .7rem 1rem;
+      font-family: 'Outfit', sans-serif; font-size: .9rem;
+      padding: .7rem 2.8rem .7rem 1rem;
       outline: none;
+      transition: border-color .2s, box-shadow .2s;
     }
+    .token-input:focus {
+      border-color: var(--green-lt);
+      box-shadow: 0 0 0 3px rgba(46,125,50,0.15);
+    }
+    .token-input::placeholder { color: var(--muted); }
 
     .spinner {
       width: 20px; height: 20px;
@@ -204,6 +233,37 @@
     @keyframes spin { to { transform: rotate(360deg); } }
 
     audio { width: 100%; border-radius: 8px; }
+    audio::-webkit-media-controls-panel { background: var(--surface2); }
+
+    .wave { display: flex; align-items: flex-end; gap: 3px; height: 24px; }
+    .wave span {
+      display: block; width: 3px;
+      background: var(--green-lt);
+      border-radius: 3px;
+      animation: wv 1s ease-in-out infinite;
+    }
+    .wave span:nth-child(1){animation-delay:0s;   height:8px;}
+    .wave span:nth-child(2){animation-delay:.1s;  height:16px;}
+    .wave span:nth-child(3){animation-delay:.2s;  height:24px;}
+    .wave span:nth-child(4){animation-delay:.3s;  height:12px;}
+    .wave span:nth-child(5){animation-delay:.4s;  height:20px;}
+    .wave span:nth-child(6){animation-delay:.5s;  height:8px;}
+    .wave span:nth-child(7){animation-delay:.6s;  height:18px;}
+    @keyframes wv {
+      0%,100%{transform:scaleY(.4);opacity:.5;}
+      50%{transform:scaleY(1);opacity:1;}
+    }
+
+    .status-pill {
+      display: none;
+      align-items: center; gap: .5rem;
+      background: var(--green-dim);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      padding: .35rem .9rem;
+      font-size: .8rem; color: var(--green-lt);
+    }
+    .status-pill.show { display: flex; }
 
     .error-box {
       display: none;
@@ -211,168 +271,501 @@
       border: 1px solid rgba(248,81,73,0.35);
       border-radius: 8px;
       padding: .85rem 1rem;
-      color: #F85149; font-size: .87rem;
+      color: #F85149; font-size: .87rem; line-height: 1.5;
     }
     .error-box.show { display: block; }
+
     #audio-result { display: none; }
     #audio-result.show { display: block; }
-    .status-pill { display: none; }
-    .status-pill.show { display: flex; align-items: center; gap: 8px; color: var(--green-lt); }
+
+    .section-label {
+      font-size: .72rem; text-transform: uppercase;
+      letter-spacing: .12em; color: var(--green-lt);
+      font-weight: 600; margin-bottom: .5rem;
+      display: flex; align-items: center; gap: .5rem;
+    }
+    .char-count { font-size: .75rem; color: var(--muted); text-align: right; margin-top: .4rem; }
+    .gear-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      width: 38px; height: 38px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 1.1rem;
+      transition: color .18s, border-color .18s, box-shadow .18s;
+    }
+    .gear-btn:hover {
+      color: var(--green-lt);
+      border-color: var(--green);
+      box-shadow: 0 0 10px var(--green-glow);
+    }
+    .modal-save {
+      flex: 1; background: var(--green);
+      color: #fff; border: none;
+      border-radius: 8px; padding: .65rem 1rem;
+      font-family: 'Outfit', sans-serif; font-weight: 600;
+      font-size: .9rem; cursor: pointer;
+      transition: opacity .18s, transform .15s;
+    }
+    .modal-save:hover { opacity: .9; transform: translateY(-1px); }
+    .modal-clear {
+      flex: 1; background: transparent;
+      border: 1px solid rgba(248,81,73,0.4);
+      color: var(--red); border-radius: 8px;
+      padding: .65rem 1rem;
+      font-family: 'Outfit', sans-serif; font-weight: 600;
+      font-size: .9rem; cursor: pointer;
+      transition: background .18s;
+    }
+    .modal-clear:hover { background: rgba(248,81,73,0.08); }
+    .info-badge {
+      display: inline-flex; align-items: center;
+      background: rgba(227,179,65,0.1);
+      border: 1px solid rgba(227,179,65,0.3);
+      color: var(--amber);
+      border-radius: 50px;
+      font-size: .68rem; font-weight: 500;
+      padding: .18rem .6rem; gap: .3rem;
+    }
+    .divider { border: none; border-top: 1px solid var(--border); }
+    .warn-box {
+      background: rgba(248,81,73,0.08);
+      border: 1px solid rgba(248,81,73,0.35);
+      border-radius: 8px;
+      padding: .75rem 1rem;
+      color: #F85149; font-size: .85rem;
+    }
   </style>
 </head>
 <body>
 
-<!-- SETTINGS MODAL -->
-<div id="settings-modal" class="modal-backdrop">
+<!-- ══ SETTINGS MODAL ══ -->
+<div id="settings-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Settings">
   <div class="modal-box">
-    <div style="display:flex;justify-content:space-between;margin-bottom:1rem;">
-      <h2 style="color:white;">⚙️ Booth Settings</h2>
-      <button onclick="closeSettings()" style="color:white;cursor:pointer;">&times;</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <h2 style="font-size:1.2rem;color:var(--text);">⚙️ Booth Settings</h2>
+      <button onclick="closeSettings()" style="background:none;border:none;color:var(--muted);font-size:1.5rem;cursor:pointer;line-height:1;">&times;</button>
     </div>
-    <input id="hf-token" type="password" class="token-input" placeholder="hf_xxxxxx" />
-    <div style="display:flex;gap:10px;margin-top:1rem;">
-      <button onclick="saveToken()" style="background:var(--green);color:white;padding:10px;border-radius:5px;flex:1;cursor:pointer;">Save</button>
-      <button onclick="clearToken()" style="border:1px solid var(--red);color:var(--red);padding:10px;border-radius:5px;flex:1;cursor:pointer;">Clear</button>
+    <p style="font-size:.83rem;color:var(--muted);margin-bottom:1.2rem;line-height:1.6;">
+      Paste your <strong style="color:var(--text);">Hugging Face Access Token</strong> below.
+      It is saved <em>only</em> in your browser's localStorage — never uploaded to GitHub.
+    </p>
+    <div class="section-label" style="margin-bottom:.4rem;">Hugging Face Token</div>
+    <div style="position:relative;margin-bottom:1.2rem;">
+      <input id="hf-token" type="password" class="token-input"
+             placeholder="hf_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
+      <button onclick="toggleTokenVis()" title="Show/hide"
+              style="position:absolute;right:.75rem;top:50%;transform:translateY(-50%);
+                     background:none;border:none;cursor:pointer;color:var(--muted);font-size:1rem;">👁</button>
     </div>
+    <div style="display:flex;gap:.75rem;margin-bottom:1rem;">
+      <button class="modal-save" onclick="saveToken()">Save Token</button>
+      <button class="modal-clear" onclick="clearToken()">Clear Token</button>
+    </div>
+    <p id="token-msg" style="font-size:.82rem;text-align:center;color:var(--green-lt);display:none;">
+      ✅ Token saved to localStorage!
+    </p>
   </div>
 </div>
 
-<div class="wrap">
+<!-- ══ MAIN APP ══ -->
+<div class="wrap" style="min-height:100vh;display:flex;flex-direction:column;">
+
+  <!-- Header -->
   <header class="header">
-    <div style="max-width:760px;margin:0 auto;padding:1rem;display:flex;justify-content:space-between;align-items:center;">
-      <h1 style="color:white;">Swahilitalk <span style="color:var(--green-lt);font-size:0.8rem;">PRODUCER BOOTH</span></h1>
-      <button onclick="openSettings()" style="cursor:pointer;">⚙️</button>
+    <div style="max-width:760px;margin:0 auto;padding:.9rem 1.25rem;
+                display:flex;align-items:center;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:.85rem;">
+        <div class="logo-mark">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M2 14 Q5 4 9 9 Q13 14 16 4" stroke="#4CAF50" stroke-width="2.2"
+                  stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+        </div>
+        <div>
+          <h1 style="font-size:1.15rem;color:var(--white);line-height:1.1;">
+            Swahilitalk
+            <span style="color:var(--green-lt);font-size:.72rem;font-family:'Outfit',sans-serif;
+                         font-weight:500;margin-left:.5rem;letter-spacing:.1em;text-transform:uppercase;">
+              Producer Booth
+            </span>
+          </h1>
+        </div>
+      </div>
+      <button class="gear-btn" onclick="openSettings()" aria-label="Open settings">⚙️</button>
     </div>
   </header>
 
-  <main style="max-width:760px;margin:0 auto;padding:2rem 1rem;">
-    <div id="token-warn" style="display:none;color:var(--amber);margin-bottom:1rem;">🔐 Add your token in settings.</div>
+  <!-- Body -->
+  <main style="flex:1;max-width:760px;margin:0 auto;width:100%;padding:2rem 1.25rem 3rem;">
 
-    <div style="display:flex;gap:10px;margin-bottom:1.5rem;">
-      <button class="voice-btn active" data-voice="standard" onclick="selectVoice(this)">Standard Voice</button>
-      <button class="voice-btn" data-voice="deep_male" onclick="selectVoice(this)">Deep Male</button>
+    <!-- Token warning -->
+    <div id="token-warn" class="warn-box" style="display:none;margin-bottom:1.25rem;">
+      🔐 No Hugging Face token found. Click <strong>⚙️</strong> above to add your token before generating audio.
     </div>
 
-    <textarea id="story-text" placeholder="Andika hapa..."></textarea>
-    
-    <div style="margin-top:1rem;display:flex;align-items:center;gap:1rem;">
-      <button id="gen-btn" class="btn-generate" onclick="generate()">🎙 Generate Narration</button>
-      <div id="status-pill" class="status-pill"><div class="spinner"></div> Waking up AI...</div>
-    </div>
+    <div style="display:flex;flex-direction:column;gap:1.5rem;">
 
-    <div id="error-box" class="error-box"></div>
+      <!-- Voice Selection -->
+      <div>
+        <div class="section-label">🎙 Voice Style</div>
+        <div style="display:flex;gap:.6rem;flex-wrap:wrap;" id="voice-selector">
+          <button class="voice-btn active" data-voice="standard" onclick="selectVoice(this)">
+            <div class="vname">Standard Narrative</div>
+            <div class="vtag">Neutral · Clear · Balanced</div>
+          </button>
+          <button class="voice-btn" data-voice="deep_male" onclick="selectVoice(this)">
+            <div class="vname">Deep Male · Mzee</div>
+            <div class="vtag">Authoritative · Rich tone</div>
+          </button>
+          <button class="voice-btn" data-voice="soft_female" onclick="selectVoice(this)">
+            <div class="vname">Soft Female</div>
+            <div class="vtag">Gentle · Melodic · Warm</div>
+          </button>
+        </div>
+      </div>
 
-    <div id="audio-result" style="margin-top:2rem;">
-      <button class="btn-dl" onclick="downloadAudio()">Download MP3</button>
-      <audio id="audio-player" controls style="margin-top:1rem;"></audio>
+      <!-- Speed Toggle -->
+      <div>
+        <div class="section-label">
+          ⏱ Playback Speed
+          <span class="info-badge">⚡ JS playbackRate — works on any audio</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+          <div class="speed-pill">
+            <button class="speed-opt active" data-rate="1.0" onclick="selectSpeed(this)">Normal Speed</button>
+            <button class="speed-opt" data-rate="0.8" onclick="selectSpeed(this)">🐢 Slow — Learner (0.8×)</button>
+          </div>
+          <span id="speed-note" style="font-size:.75rem;color:var(--muted);display:none;">
+            Audio plays &amp; downloads at 0.8×
+          </span>
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- Script Area -->
+      <div>
+        <div class="section-label">📝 Swahili Script / Maandishi</div>
+        <textarea id="story-text"
+                  placeholder="Andika hadithi yako hapa… (Write your Swahili script here…)"
+                  oninput="updateCount()"></textarea>
+        <div class="char-count"><span id="char-count">0</span> characters</div>
+      </div>
+
+      <!-- Generate Button -->
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <button id="gen-btn" class="btn-generate" onclick="generate()">
+          <span id="btn-icon">🎙</span>
+          <span id="btn-label">Generate Narration</span>
+          <span id="btn-spinner" class="spinner" style="display:none;"></span>
+        </button>
+        <div id="status-pill" class="status-pill">
+          <div class="spinner" style="width:14px;height:14px;border-width:2px;
+               border-color:rgba(76,175,80,.3);border-top-color:var(--green-lt);"></div>
+          <span>Processing with AI…</span>
+        </div>
+      </div>
+
+      <!-- Error -->
+      <div id="error-box" class="error-box"></div>
+
+      <!-- Audio Result -->
+      <div id="audio-result">
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    flex-wrap:wrap;gap:.75rem;margin-bottom:.9rem;">
+          <div style="display:flex;align-items:center;gap:.75rem;">
+            <div class="wave">
+              <span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span>
+            </div>
+            <span style="font-family:'Syne',serif;font-size:.95rem;color:var(--green-lt);font-weight:700;">
+              Narration Ready
+            </span>
+          </div>
+          <button class="btn-dl" onclick="downloadAudio()">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M8 12l-4.5-4.5 1.06-1.06L7 8.88V2h2v6.88l2.44-2.44L12.5 7.5 8 12z"/>
+              <path d="M2 14h12v-2H2v2z"/>
+            </svg>
+            Download MP3
+          </button>
+        </div>
+        <div class="panel" style="padding:.75rem;">
+          <audio id="audio-player" controls></audio>
+        </div>
+        <p id="speed-dl-note" style="font-size:.75rem;color:var(--amber);margin-top:.6rem;display:none;">
+          ⚡ Learner Speed active — download will be re-encoded at 0.8× speed as a .wav file.
+        </p>
+      </div>
+
     </div>
   </main>
+
+  <!-- Footer -->
+  <footer style="border-top:1px solid var(--border);padding:1rem 1.25rem;text-align:center;">
+    <p style="font-size:.75rem;color:var(--muted);">
+      Powered by <strong style="color:var(--green-lt);">Luciana/msingiai-sw-v1</strong> on Hugging Face ·
+      Token stored in your browser only · Built for Swahilitalk Payhip Store
+    </p>
+  </footer>
 </div>
 
 <script>
-const HF_MODEL = "msingiai/sauti-tts";
+/* ── Config ─────────────────────────────────────────────────────────
+   To switch models, change HF_MODEL here only.
+   Current: Luciana/msingiai-sw-v1
+   Alternative: msingiai/sauti-tts
+──────────────────────────────────────────────────────────────────── */
+const HF_MODEL = "Luciana/msingiai-sw-v1";
 const LS_KEY   = "swahilitalk_hf_token";
 
 const VOICE_PARAMS = {
   standard:    { seed: 42,  pitch_offset: 0  },
-  deep_male:   { seed: 999, pitch_offset: -5 }
+  deep_male:   { seed: 999, pitch_offset: -5 },
+  soft_female: { seed: 7,   pitch_offset:  5 },
 };
 
 let currentVoice = "standard";
+let currentRate  = 1.0;
 let audioBlob    = null;
+let tokenVisible = false;
 
+/* ── Init ── */
 window.addEventListener('DOMContentLoaded', () => {
   const saved = localStorage.getItem(LS_KEY);
-  if (saved) document.getElementById('hf-token').value = saved;
-  else document.getElementById('token-warn').style.display = 'block';
+  if (saved) {
+    document.getElementById('hf-token').value = saved;
+  } else {
+    document.getElementById('token-warn').style.display = 'block';
+  }
 });
 
+function updateCount() {
+  document.getElementById('char-count').textContent =
+    document.getElementById('story-text').value.length;
+}
+
+/* ── Voice ── */
 function selectVoice(btn) {
   document.querySelectorAll('.voice-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   currentVoice = btn.dataset.voice;
 }
 
-function openSettings() { document.getElementById('settings-modal').classList.add('open'); }
-function closeSettings() { document.getElementById('settings-modal').classList.remove('open'); }
-
-function saveToken() {
-  const val = document.getElementById('hf-token').value.trim();
-  localStorage.setItem(LS_KEY, val);
-  document.getElementById('token-warn').style.display = 'none';
-  closeSettings();
+/* ── Speed ── */
+function selectSpeed(btn) {
+  document.querySelectorAll('.speed-opt').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentRate = parseFloat(btn.dataset.rate);
+  const isSlow = currentRate < 1.0;
+  document.getElementById('speed-note').style.display    = isSlow ? 'inline' : 'none';
+  document.getElementById('speed-dl-note').style.display = isSlow ? 'block'  : 'none';
+  const player = document.getElementById('audio-player');
+  if (player.src) player.playbackRate = currentRate;
 }
 
+/* ── Settings ── */
+function openSettings()  { document.getElementById('settings-modal').classList.add('open'); }
+function closeSettings() {
+  document.getElementById('settings-modal').classList.remove('open');
+  document.getElementById('token-msg').style.display = 'none';
+}
+document.getElementById('settings-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('settings-modal')) closeSettings();
+});
+function toggleTokenVis() {
+  const inp = document.getElementById('hf-token');
+  tokenVisible = !tokenVisible;
+  inp.type = tokenVisible ? 'text' : 'password';
+}
+function saveToken() {
+  const val = document.getElementById('hf-token').value.trim();
+  if (!val) { alert('Please paste your Hugging Face token first.'); return; }
+  localStorage.setItem(LS_KEY, val);
+  document.getElementById('token-warn').style.display = 'none';
+  const msg = document.getElementById('token-msg');
+  msg.style.display = 'block';
+  setTimeout(() => { msg.style.display = 'none'; }, 3000);
+}
 function clearToken() {
   localStorage.removeItem(LS_KEY);
   document.getElementById('hf-token').value = '';
+  document.getElementById('token-warn').style.display = 'block';
+  alert('Token cleared from localStorage.');
 }
 
+/* ── Generate ────────────────────────────────────────────────────────
+   FIX 1: Removed the extra closing brace } that was breaking all JS.
+   FIX 2: Added 'Accept': 'audio/mpeg' header so the API returns audio,
+           not a JSON error object.
+   FIX 3: Error handling now reads the response body correctly —
+           text() first, then attempts JSON parse, so it never crashes
+           trying to parse an audio blob as JSON.
+   KEPT:  options.wait_for_model = true  (good addition, keep it)
+──────────────────────────────────────────────────────────────────── */
 async function generate() {
-  const text = document.getElementById('story-text').value.trim();
+  const text  = document.getElementById('story-text').value.trim();
   const token = localStorage.getItem(LS_KEY) || '';
 
-  if (!text || !token) {
-    alert("Please enter text and ensure your token is saved.");
-    return;
-  }
+  clearError();
+
+  if (!text)  { showError('⚠️ Please write your Swahili script before generating narration.'); return; }
+  if (!token) { showError('🔐 No Hugging Face token found. Click ⚙️ to add your token.'); return; }
 
   setLoading(true);
-  document.getElementById('error-box').classList.remove('show');
-  document.getElementById('audio-result').classList.remove('show');
+  hideAudioResult();
+  audioBlob = null;
 
   try {
-    const params = VOICE_PARAMS[currentVoice];
+    const params  = VOICE_PARAMS[currentVoice];
     const payload = {
       inputs: text,
-      parameters: { seed: params.seed, pitch_offset: params.pitch_offset },
-      options: { wait_for_model: true }
+      parameters: {
+        seed:         params.seed,
+        pitch_offset: params.pitch_offset,
+      },
+      options: {
+        wait_for_model: true,   // tells HF to wait for model to load instead of returning 503
+      },
     };
 
-    const res = await fetch(`https://api-inference.huggingface.co/models/${HF_MODEL}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
+    const res = await fetch(
+      `https://api-inference.huggingface.co/models/${HF_MODEL}`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type':  'application/json',
+          'Accept':        'audio/mpeg',   // ← FIX 2: required to receive audio back
+        },
+        body: JSON.stringify(payload),
+      }
+    );
 
+    // FIX 3: safe error reading — don't assume JSON on an audio endpoint
     if (!res.ok) {
-      const errTxt = await res.text();
-      throw new Error(errTxt || "Failed to fetch from AI");
+      const raw = await res.text().catch(() => '');
+      let message = `API error ${res.status}.`;
+      try {
+        const json = JSON.parse(raw);
+        message = json.error || message;
+      } catch (_) {
+        // raw text wasn't JSON — use the status-based message below
+      }
+      if (res.status === 401) throw new Error('❌ Invalid token. Check your Hugging Face Access Token in ⚙️ Settings.');
+      if (res.status === 503) throw new Error('⏳ Model is waking up on Hugging Face. Wait 15 seconds and try again.');
+      if (res.status === 429) throw new Error('⏱️ Rate limit reached. Please wait a moment then try again.');
+      throw new Error(message);
     }
 
     audioBlob = await res.blob();
     const url = URL.createObjectURL(audioBlob);
     const player = document.getElementById('audio-player');
-    player.src = url;
-    document.getElementById('audio-result').classList.add('show');
+    player.src          = url;
+    player.playbackRate = currentRate;
+    showAudioResult();
 
   } catch (err) {
-    const errBox = document.getElementById('error-box');
-    errBox.textContent = "Error: " + err.message;
-    errBox.classList.add('show');
+    showError(err.message || 'Something went wrong. Please try again.');
   } finally {
-    setLoading(false);
+    setLoading(false);   // always re-enables the button, even on error
   }
+
+} // ← single correct closing brace for generate()
+
+
+/* ── Download (with slow-speed WAV re-encode for Learner mode) ── */
+async function downloadAudio() {
+  if (!audioBlob) return;
+
+  if (currentRate < 1.0) {
+    try {
+      const arrayBuffer  = await audioBlob.arrayBuffer();
+      const audioCtx     = new (window.AudioContext || window.webkitAudioContext)();
+      const decoded      = await audioCtx.decodeAudioData(arrayBuffer);
+      const numChannels  = decoded.numberOfChannels;
+      const sampleRate   = decoded.sampleRate;
+      const slowLength   = Math.ceil(decoded.length / currentRate);
+      const offlineCtx   = new OfflineAudioContext(numChannels, slowLength, sampleRate);
+      const source       = offlineCtx.createBufferSource();
+      source.buffer            = decoded;
+      source.playbackRate.value = currentRate;
+      source.connect(offlineCtx.destination);
+      source.start(0);
+      const rendered = await offlineCtx.startRendering();
+      const wavBlob  = audioBufferToWav(rendered);
+      triggerDownload(wavBlob, `swahilitalk_learner_${Date.now()}.wav`);
+      await audioCtx.close();
+      return;
+    } catch (e) {
+      console.warn('Slow re-encode failed, downloading original:', e);
+    }
+  }
+
+  triggerDownload(audioBlob, `swahilitalk_narration_${Date.now()}.mp3`);
 }
 
+function triggerDownload(blob, filename) {
+  const url  = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url; link.download = filename; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 8000);
+}
+
+/* ── AudioBuffer → WAV ── */
+function audioBufferToWav(buffer) {
+  const numCh = buffer.numberOfChannels;
+  const rate  = buffer.sampleRate;
+  const len   = buffer.length;
+  const ab    = new ArrayBuffer(44 + len * numCh * 2);
+  const view  = new DataView(ab);
+  const ws    = (off, str) => { for (let i = 0; i < str.length; i++) view.setUint8(off + i, str.charCodeAt(i)); };
+  ws(0, 'RIFF'); view.setUint32(4, 36 + len * numCh * 2, true);
+  ws(8, 'WAVE'); ws(12, 'fmt '); view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);       // PCM
+  view.setUint16(22, numCh, true);
+  view.setUint32(24, rate, true);
+  view.setUint32(28, rate * numCh * 2, true);
+  view.setUint16(32, numCh * 2, true);
+  view.setUint16(34, 16, true);      // 16-bit
+  ws(36, 'data'); view.setUint32(40, len * numCh * 2, true);
+  let offset = 44;
+  for (let i = 0; i < len; i++) {
+    for (let ch = 0; ch < numCh; ch++) {
+      const s = Math.max(-1, Math.min(1, buffer.getChannelData(ch)[i]));
+      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+      offset += 2;
+    }
+  }
+  return new Blob([ab], { type: 'audio/wav' });
+}
+
+/* ── UI Helpers ── */
 function setLoading(on) {
-  const btn = document.getElementById('gen-btn');
-  const pill = document.getElementById('status-pill');
-  btn.disabled = on;
+  const btn     = document.getElementById('gen-btn');
+  const spinner = document.getElementById('btn-spinner');
+  const label   = document.getElementById('btn-label');
+  const icon    = document.getElementById('btn-icon');
+  const pill    = document.getElementById('status-pill');
+  btn.disabled          = on;
+  spinner.style.display = on ? 'block' : 'none';
+  icon.style.display    = on ? 'none'  : 'inline';
+  label.textContent     = on ? 'Generating…' : 'Generate Narration';
   pill.classList.toggle('show', on);
 }
-
-function downloadAudio() {
-  if (!audioBlob) return;
-  const url = URL.createObjectURL(audioBlob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = "swahili_audio.mp3";
-  a.click();
+function showAudioResult() {
+  const el = document.getElementById('audio-result');
+  el.classList.add('show');
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
+function hideAudioResult() { document.getElementById('audio-result').classList.remove('show'); }
+function showError(msg) {
+  const box = document.getElementById('error-box');
+  box.textContent = msg; box.classList.add('show');
+}
+function clearError() { document.getElementById('error-box').classList.remove('show'); }
 </script>
 </body>
 </html>
