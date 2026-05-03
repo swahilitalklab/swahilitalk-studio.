@@ -506,21 +506,27 @@
   <!-- Footer -->
   <footer style="border-top:1px solid var(--border);padding:1rem 1.25rem;text-align:center;">
     <p style="font-size:.75rem;color:var(--muted);">
-      Powered by <strong style="color:var(--green-lt);">msingiai / sauti-tts</strong> on Hugging Face ·
+      Powered by <strong style="color:var(--green-lt);">Luciana/msingiai-sw-v1</strong> on Hugging Face ·
       Token stored in your browser only · Built for Swahilitalk Payhip Store
     </p>
   </footer>
 </div>
 
 <script>
-/* ── Config ── */
-const HF_MODEL = "msingiai/sauti-tts";
+/* ── Config ─────────────────────────────────────────────────────────
+   To switch models, change HF_MODEL here only.
+   Current: Luciana/msingiai-sw-v1
+   Alternative: msingiai/sauti-tts
+──────────────────────────────────────────────────────────────────── */
+const HF_MODEL = "Luciana/msingiai-sw-v1";
 const LS_KEY   = "swahilitalk_hf_token";
+
 const VOICE_PARAMS = {
   standard:    { seed: 42,  pitch_offset: 0  },
   deep_male:   { seed: 999, pitch_offset: -5 },
   soft_female: { seed: 7,   pitch_offset:  5 },
 };
+
 let currentVoice = "standard";
 let currentRate  = 1.0;
 let audioBlob    = null;
@@ -554,7 +560,7 @@ function selectSpeed(btn) {
   btn.classList.add('active');
   currentRate = parseFloat(btn.dataset.rate);
   const isSlow = currentRate < 1.0;
-  document.getElementById('speed-note').style.display   = isSlow ? 'inline' : 'none';
+  document.getElementById('speed-note').style.display    = isSlow ? 'inline' : 'none';
   document.getElementById('speed-dl-note').style.display = isSlow ? 'block'  : 'none';
   const player = document.getElementById('audio-player');
   if (player.src) player.playbackRate = currentRate;
@@ -590,11 +596,21 @@ function clearToken() {
   alert('Token cleared from localStorage.');
 }
 
-/* ── Generate ── */
+/* ── Generate ────────────────────────────────────────────────────────
+   FIX 1: Removed the extra closing brace } that was breaking all JS.
+   FIX 2: Added 'Accept': 'audio/mpeg' header so the API returns audio,
+           not a JSON error object.
+   FIX 3: Error handling now reads the response body correctly —
+           text() first, then attempts JSON parse, so it never crashes
+           trying to parse an audio blob as JSON.
+   KEPT:  options.wait_for_model = true  (good addition, keep it)
+──────────────────────────────────────────────────────────────────── */
 async function generate() {
   const text  = document.getElementById('story-text').value.trim();
   const token = localStorage.getItem(LS_KEY) || '';
+
   clearError();
+
   if (!text)  { showError('⚠️ Please write your Swahili script before generating narration.'); return; }
   if (!token) { showError('🔐 No Hugging Face token found. Click ⚙️ to add your token.'); return; }
 
@@ -602,16 +618,17 @@ async function generate() {
   hideAudioResult();
   audioBlob = null;
 
- try {
+  try {
     const params  = VOICE_PARAMS[currentVoice];
     const payload = {
       inputs: text,
-      parameters: { 
-        seed: params.seed, 
-        pitch_offset: params.pitch_offset 
+      parameters: {
+        seed:         params.seed,
+        pitch_offset: params.pitch_offset,
       },
-      // THIS IS THE KEY: It forces the AI to wake up before sending an error
-      options: { wait_for_model: true } 
+      options: {
+        wait_for_model: true,   // tells HF to wait for model to load instead of returning 503
+      },
     };
 
     const res = await fetch(
@@ -620,53 +637,60 @@ async function generate() {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type':  'application/json'
+          'Content-Type':  'application/json',
+          'Accept':        'audio/mpeg',   // ← FIX 2: required to receive audio back
         },
         body: JSON.stringify(payload),
       }
     );
 
+    // FIX 3: safe error reading — don't assume JSON on an audio endpoint
     if (!res.ok) {
-      const errorData = await res.json().catch(() => ({ error: 'Unknown server error' }));
+      const raw = await res.text().catch(() => '');
+      let message = `API error ${res.status}.`;
+      try {
+        const json = JSON.parse(raw);
+        message = json.error || message;
+      } catch (_) {
+        // raw text wasn't JSON — use the status-based message below
+      }
       if (res.status === 401) throw new Error('❌ Invalid token. Check your Hugging Face Access Token in ⚙️ Settings.');
-      if (res.status === 503) throw new Error('⏳ AI is waking up. Wait 10 seconds and click Narrate again.');
-      throw new Error(errorData.error || `API error ${res.status}`);
+      if (res.status === 503) throw new Error('⏳ Model is waking up on Hugging Face. Wait 15 seconds and try again.');
+      if (res.status === 429) throw new Error('⏱️ Rate limit reached. Please wait a moment then try again.');
+      throw new Error(message);
     }
 
     audioBlob = await res.blob();
     const url = URL.createObjectURL(audioBlob);
     const player = document.getElementById('audio-player');
-    player.src = url;
+    player.src          = url;
     player.playbackRate = currentRate;
     showAudioResult();
 
   } catch (err) {
     showError(err.message || 'Something went wrong. Please try again.');
   } finally {
-    setLoading(false);
+    setLoading(false);   // always re-enables the button, even on error
   }
-  }
-}
 
-/* ── Download (with optional slow-speed WAV re-encode) ── */
+} // ← single correct closing brace for generate()
+
+
+/* ── Download (with slow-speed WAV re-encode for Learner mode) ── */
 async function downloadAudio() {
   if (!audioBlob) return;
 
   if (currentRate < 1.0) {
     try {
-      const arrayBuffer = await audioBlob.arrayBuffer();
-      const audioCtx    = new (window.AudioContext || window.webkitAudioContext)();
-      const decoded     = await audioCtx.decodeAudioData(arrayBuffer);
-      const slowDuration = decoded.duration / currentRate;
-      const sampleRate   = decoded.sampleRate;
+      const arrayBuffer  = await audioBlob.arrayBuffer();
+      const audioCtx     = new (window.AudioContext || window.webkitAudioContext)();
+      const decoded      = await audioCtx.decodeAudioData(arrayBuffer);
       const numChannels  = decoded.numberOfChannels;
-      const offlineCtx   = new OfflineAudioContext(
-        numChannels,
-        Math.ceil(slowDuration * sampleRate),
-        sampleRate
-      );
-      const source = offlineCtx.createBufferSource();
-      source.buffer = decoded;
+      const sampleRate   = decoded.sampleRate;
+      const slowLength   = Math.ceil(decoded.length / currentRate);
+      const offlineCtx   = new OfflineAudioContext(numChannels, slowLength, sampleRate);
+      const source       = offlineCtx.createBufferSource();
+      source.buffer            = decoded;
       source.playbackRate.value = currentRate;
       source.connect(offlineCtx.destination);
       source.start(0);
@@ -675,10 +699,11 @@ async function downloadAudio() {
       triggerDownload(wavBlob, `swahilitalk_learner_${Date.now()}.wav`);
       await audioCtx.close();
       return;
-    } catch(e) {
-      console.warn('Slow re-encode failed, falling back:', e);
+    } catch (e) {
+      console.warn('Slow re-encode failed, downloading original:', e);
     }
   }
+
   triggerDownload(audioBlob, `swahilitalk_narration_${Date.now()}.mp3`);
 }
 
@@ -689,31 +714,35 @@ function triggerDownload(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 8000);
 }
 
+/* ── AudioBuffer → WAV ── */
 function audioBufferToWav(buffer) {
   const numCh = buffer.numberOfChannels;
   const rate  = buffer.sampleRate;
   const len   = buffer.length;
   const ab    = new ArrayBuffer(44 + len * numCh * 2);
   const view  = new DataView(ab);
-  const ws    = (off, str) => { for(let i=0;i<str.length;i++) view.setUint8(off+i,str.charCodeAt(i)); };
-  ws(0,'RIFF'); view.setUint32(4,36+len*numCh*2,true);
-  ws(8,'WAVE'); ws(12,'fmt '); view.setUint32(16,16,true);
-  view.setUint16(20,1,true); view.setUint16(22,numCh,true);
-  view.setUint32(24,rate,true); view.setUint32(28,rate*numCh*2,true);
-  view.setUint16(32,numCh*2,true); view.setUint16(34,16,true);
-  ws(36,'data'); view.setUint32(40,len*numCh*2,true);
+  const ws    = (off, str) => { for (let i = 0; i < str.length; i++) view.setUint8(off + i, str.charCodeAt(i)); };
+  ws(0, 'RIFF'); view.setUint32(4, 36 + len * numCh * 2, true);
+  ws(8, 'WAVE'); ws(12, 'fmt '); view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);       // PCM
+  view.setUint16(22, numCh, true);
+  view.setUint32(24, rate, true);
+  view.setUint32(28, rate * numCh * 2, true);
+  view.setUint16(32, numCh * 2, true);
+  view.setUint16(34, 16, true);      // 16-bit
+  ws(36, 'data'); view.setUint32(40, len * numCh * 2, true);
   let offset = 44;
-  for(let i=0;i<len;i++) {
-    for(let ch=0;ch<numCh;ch++) {
-      const s = Math.max(-1,Math.min(1,buffer.getChannelData(ch)[i]));
-      view.setInt16(offset, s<0?s*0x8000:s*0x7FFF, true);
-      offset+=2;
+  for (let i = 0; i < len; i++) {
+    for (let ch = 0; ch < numCh; ch++) {
+      const s = Math.max(-1, Math.min(1, buffer.getChannelData(ch)[i]));
+      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+      offset += 2;
     }
   }
-  return new Blob([ab],{type:'audio/wav'});
+  return new Blob([ab], { type: 'audio/wav' });
 }
 
-/* ── UI helpers ── */
+/* ── UI Helpers ── */
 function setLoading(on) {
   const btn     = document.getElementById('gen-btn');
   const spinner = document.getElementById('btn-spinner');
@@ -729,7 +758,7 @@ function setLoading(on) {
 function showAudioResult() {
   const el = document.getElementById('audio-result');
   el.classList.add('show');
-  el.scrollIntoView({behavior:'smooth',block:'nearest'});
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 function hideAudioResult() { document.getElementById('audio-result').classList.remove('show'); }
 function showError(msg) {
