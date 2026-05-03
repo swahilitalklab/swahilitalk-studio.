@@ -632,7 +632,19 @@ async function generate() {
     };
 
     const res = await fetch(
-      `https://api-inference.huggingface.co/models/${HF_MODEL}`,
+      `fetch("/api/narrate", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    text: userInput
+  })
+})
+.then(res => res.json())
+.then(data => {
+  console.log(data);
+});`,
       {
         method: 'POST',
         headers: {
